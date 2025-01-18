@@ -3,7 +3,7 @@ import re
 
 from colorama import Fore
 from dotenv import load_dotenv
-from groq import Groq
+from openai import OpenAI
 
 from agentic_patterns.tool_pattern.tool import Tool
 from agentic_patterns.tool_pattern.tool import validate_arguments
@@ -17,17 +17,15 @@ load_dotenv()
 
 
 TOOL_SYSTEM_PROMPT = """
-You are a function calling AI model. You are provided with function signatures within <tools></tools> XML tags.
-You may call one or more functions to assist with the user query. Don't make assumptions about what values to plug
-into functions. Pay special attention to the properties 'types'. You should use those types as in a Python dict.
-For each function call return a json object with function name and arguments within <tool_call></tool_call>
-XML tags as follows:
+你是一个函数调用AI模型。你被提供了在 <tools></tools> XML标签内的函数签名。
+你可以调用一个或多个函数来辅助用户查询。不要对要插入函数的值做任何假设。特别注意属性 "types"。你应该像在Python字典中那样使用这些类型。
+对于每个函数调用，返回一个json对象，其中包含函数名和参数，放在 <tool_call></tool_call> XML标签内，如下所示：
 
 <tool_call>
 {"name": <function-name>,"arguments": <args-dict>,  "id": <monotonically-increasing-id>}
 </tool_call>
 
-Here are the available tools:
+以下是可用的工具：
 
 <tools>
 %s
@@ -44,16 +42,16 @@ class ToolAgent:
     Attributes:
         tools (Tool | list[Tool]): A list of tools available to the agent.
         model (str): The model to be used for generating tool calls and responses.
-        client (Groq): The Groq client used to interact with the language model.
+        client (OpenAI): The OpenAI client used to interact with the language model.
         tools_dict (dict): A dictionary mapping tool names to their corresponding Tool objects.
     """
 
     def __init__(
         self,
         tools: Tool | list[Tool],
-        model: str = "llama3-groq-70b-8192-tool-use-preview",
+        model: str = "llama-3.1-70b-versatile",
     ) -> None:
-        self.client = Groq()
+        self.client: OpenAI = None
         self.model = model
         self.tools = tools if isinstance(tools, list) else [tools]
         self.tools_dict = {tool.name: tool for tool in self.tools}

@@ -1,3 +1,4 @@
+# 调用LLM
 def completions_create(client, messages: list, model: str) -> str:
     """
     Sends a request to the client's `completions.create` method to interact with the language model.
@@ -13,7 +14,7 @@ def completions_create(client, messages: list, model: str) -> str:
     response = client.chat.completions.create(messages=messages, model=model)
     return str(response.choices[0].message.content)
 
-
+# 构建提示词字典
 def build_prompt_structure(prompt: str, role: str, tag: str = "") -> dict:
     """
     Builds a structured prompt that includes the role and content.
@@ -29,7 +30,7 @@ def build_prompt_structure(prompt: str, role: str, tag: str = "") -> dict:
         prompt = f"<{tag}>{prompt}</{tag}>"
     return {"role": role, "content": prompt}
 
-
+# 添加历史
 def update_chat_history(history: list, msg: str, role: str):
     """
     Updates the chat history by appending the latest response.
@@ -41,7 +42,7 @@ def update_chat_history(history: list, msg: str, role: str):
     """
     history.append(build_prompt_structure(prompt=msg, role=role))
 
-
+# 管理聊天记录，达到最长记录长度total_length，就删除第一条 （继承list，修改append方法进行管理记录长度）
 class ChatHistory(list):
     def __init__(self, messages: list | None = None, total_length: int = -1):
         """Initialise the queue with a fixed total length.
@@ -66,7 +67,7 @@ class ChatHistory(list):
             self.pop(0)
         super().append(msg)
 
-
+# 第一个消息是固定的，不能被删除
 class FixedFirstChatHistory(ChatHistory):
     def __init__(self, messages: list | None = None, total_length: int = -1):
         """Initialise the queue with a fixed total length.

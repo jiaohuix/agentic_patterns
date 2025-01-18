@@ -85,7 +85,7 @@ class Tool:
         """
         return self.fn(**kwargs)
 
-
+# 工具装饰器，装饰函数后转为tool类
 def tool(fn: Callable):
     """
     A decorator that wraps a function into a Tool object.
@@ -104,3 +104,28 @@ def tool(fn: Callable):
         )
 
     return wrapper()
+
+
+if __name__ == "__main__":
+    def add_numbers(a: int, b: int) -> int:
+        """
+        Adds two numbers together.
+        """
+        return a + b
+    
+    @tool
+    def subtract_numbers(a: int, b: int) -> int:
+        """
+        Subtracts the second number from the first.
+        """
+        return a - b
+    
+    print(add_numbers.__name__) # add_numbers
+    print(add_numbers.__doc__)
+    print(add_numbers.__annotations__) # {'a': <class 'int'>, 'b': <class 'int'>, 'return': <class 'int'>}
+ 
+
+    # Tool类
+    print(subtract_numbers, type(subtract_numbers))
+    # {"name": "subtract_numbers", "description": "\n        Subtracts the second number from the first.\n        ", "parameters": {"properties": {"a": {"type": "int"}, "b": {"type": "int"}}}} 
+    # <class '__main__.Tool'>

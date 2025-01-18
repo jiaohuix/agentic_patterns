@@ -3,7 +3,7 @@ import re
 
 from colorama import Fore
 from dotenv import load_dotenv
-from groq import Groq
+from openai import OpenAI
 
 from agentic_patterns.tool_pattern.tool import Tool
 from agentic_patterns.tool_pattern.tool import validate_arguments
@@ -15,42 +15,43 @@ from agentic_patterns.utils.extraction import extract_tag_content
 
 load_dotenv()
 
+BASE_SYSTEM_PROMPT = ""
+
 
 REACT_SYSTEM_PROMPT = """
-You are a function calling AI model. You operate by running a loop with the following steps: Thought, Action, Observation.
-You are provided with function signatures within <tools></tools> XML tags.
-You may call one or more functions to assist with the user query. Don' make assumptions about what values to plug
-into functions. Pay special attention to the properties 'types'. You should use those types as in a Python dict.
+你通过运行一个包含以下步骤的循环来操作：思考（Thought）、行动（Action）、观察（Observation）。
+你被提供了在 <tools></tools> XML标签内的函数签名。
+你可以调用一个或多个函数来辅助用户查询。不要对要插入函数的值做任何假设。特别注意属性 ‘types’。你应该像在Python字典中那样使用这些类型。
 
-For each function call return a json object with function name and arguments within <tool_call></tool_call> XML tags as follows:
+对于每个函数调用，返回一个json对象，其中包含函数名和参数，放在 <tool_call></tool_call> XML标签内，如下所示：
 
 <tool_call>
 {"name": <function-name>,"arguments": <args-dict>, "id": <monotonically-increasing-id>}
 </tool_call>
 
-Here are the available tools / actions:
+以下是可用的工具/行动：
 
 <tools>
 %s
 </tools>
 
-Example session:
+示例会话：
 
-<question>What's the current temperature in Madrid?</question>
-<thought>I need to get the current weather in Madrid</thought>
+
+<question>马德里现在的温度是多少？</question>
+<thought>我需要获取马德里当前的天气</thought>
 <tool_call>{"name": "get_current_weather","arguments": {"location": "Madrid", "unit": "celsius"}, "id": 0}</tool_call>
 
-You will be called again with this:
+你会被再次调用，并带有以下内容：
 
 <observation>{0: {"temperature": 25, "unit": "celsius"}}</observation>
 
-You then output:
+然后你输出：
 
-<response>The current temperature in Madrid is 25 degrees Celsius</response>
+<response>马德里现在的温度是25摄氏度</response>
 
-Additional constraints:
-
-- If the user asks you something unrelated to any of the tools above, answer freely enclosing your answer with <response></response> tags.
+附加约束：
+- 如果用户问你一些与上述任何工具无关的问题，请自由回答，并将你的答案用 <response></response> 标签括起来。
 """
 
 
@@ -61,7 +62,7 @@ class ReactAgent:
     collect tool signatures, and process multiple tool calls in a given round of interaction.
 
     Attributes:
-        client (Groq): The Groq client used to handle model-based completions.
+        client (OpenAI): The OpenAI client used to handle model-based completions.
         model (str): The name of the model used for generating responses. Default is "llama-3.1-70b-versatile".
         tools (list[Tool]): A list of Tool instances available for execution.
         tools_dict (dict): A dictionary mapping tool names to their corresponding Tool instances.
@@ -71,9 +72,11 @@ class ReactAgent:
         self,
         tools: Tool | list[Tool],
         model: str = "llama-3.1-70b-versatile",
+        system_prompt: str = BASE_SYSTEM_PROMPT,
     ) -> None:
-        self.client = Groq()
+        self.client: OpenAI = None
         self.model = model
+        self.system_prompt = system_prompt
         self.tools = tools if isinstance(tools, list) else [tools]
         self.tools_dict = {tool.name: tool for tool in self.tools}
 
@@ -138,35 +141,41 @@ class ReactAgent:
         user_prompt = build_prompt_structure(
             prompt=user_msg, role="user", tag="question"
         )
+        if self.tools:
+            self.system_prompt += (
+                "\n" + REACT_SYSTEM_PROMPT % self.add_tool_signatures()
+            )
 
         chat_history = ChatHistory(
             [
                 build_prompt_structure(
-                    prompt=REACT_SYSTEM_PROMPT % self.add_tool_signatures(),
+                    prompt=self.system_prompt,
                     role="system",
                 ),
                 user_prompt,
             ]
         )
 
-        for _ in range(max_rounds):
+        if self.tools:
+            # Run the ReAct loop for max_rounds
+            for _ in range(max_rounds):
 
-            completion = completions_create(self.client, chat_history, self.model)
+                completion = completions_create(self.client, chat_history, self.model)
 
-            response = extract_tag_content(str(completion), "response")
-            if response.found:
-                return response.content[0]
+                response = extract_tag_content(str(completion), "response")
+                if response.found:
+                    return response.content[0]
 
-            thought = extract_tag_content(str(completion), "thought")
-            tool_calls = extract_tag_content(str(completion), "tool_call")
+                thought = extract_tag_content(str(completion), "thought")
+                tool_calls = extract_tag_content(str(completion), "tool_call")
 
-            update_chat_history(chat_history, completion, "assistant")
+                update_chat_history(chat_history, completion, "assistant")
 
-            print(Fore.MAGENTA + f"\nThought: {thought.content[0]}")
+                print(Fore.MAGENTA + f"\nThought: {thought.content[0]}")
 
-            if tool_calls.found:
-                observations = self.process_tool_calls(tool_calls.content)
-                print(Fore.BLUE + f"\nObservations: {observations}")
-                update_chat_history(chat_history, f"{observations}", "user")
+                if tool_calls.found:
+                    observations = self.process_tool_calls(tool_calls.content)
+                    print(Fore.BLUE + f"\nObservations: {observations}")
+                    update_chat_history(chat_history, f"{observations}", "user")
 
         return completions_create(self.client, chat_history, self.model)
