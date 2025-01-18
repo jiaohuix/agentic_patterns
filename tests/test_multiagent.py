@@ -1,3 +1,8 @@
+import os
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
 from agentic_patterns.multiagent_pattern.agent import Agent
 from agentic_patterns.tool_pattern.tool import tool
 from agentic_patterns.multiagent_pattern.crew import Crew
@@ -27,11 +32,23 @@ def write_str_to_txt(string_data: str, txt_filename: str):
 
     print(f"Data successfully written to {txt_filename}")
 
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_BASE = os.getenv('OPENAI_API_BASE')
 
+
+
+client = OpenAI(
+api_key=OPENAI_API_KEY,
+base_url=OPENAI_API_BASE
+)
+model_name = "Qwen/Qwen2.5-Coder-7B-Instruct"
 
 with Crew() as crew:
     agent_1 = Agent(
         name="Poet Agent",
+        client=client,
+        llm=model_name,
         backstory="You are a well-known poet, who enjoys creating high quality poetry.",
         # task_description="Write a poem about the meaning of life",
         task_description="Write a english poem about the meaning of frustration",
@@ -40,6 +57,8 @@ with Crew() as crew:
 
     agent_2 = Agent(
         name="Poem Translator Agent",
+        client=client,
+        llm=model_name,
         backstory="You are an expert translator especially skilled in Chinese",
         task_description="Translate a poem into Chinese", 
         task_expected_output="Just output the translated poem and nothing else"
@@ -47,6 +66,8 @@ with Crew() as crew:
 
     agent_3 = Agent(
         name="Writer Agent",
+        client=client,
+        llm=model_name,
         backstory="You are an expert transcriber, that loves writing poems into txt files",
         task_description="You'll receive a Spanish poem in your context. You need to write the poem into './poem.txt' file",
         task_expected_output="A txt file containing the greek poem received from the context",

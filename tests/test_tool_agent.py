@@ -1,5 +1,11 @@
 import json
 import requests
+import os
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
+
 from agentic_patterns.tool_pattern.tool import tool
 from agentic_patterns.tool_pattern.tool_agent import ToolAgent
 
@@ -43,8 +49,20 @@ def fetch_top_hacker_news_stories(top_n: int):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return []
-    
+
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_BASE = os.getenv('OPENAI_API_BASE')
+
+
+client = OpenAI(
+api_key=OPENAI_API_KEY,
+base_url=OPENAI_API_BASE
+)
+model_name = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
 hn_tool = tool(fetch_top_hacker_news_stories)
-tool_agent = ToolAgent(tools=[hn_tool])
+tool_agent = ToolAgent(tools=[hn_tool],client=client,
+        model=model_name)
 output = tool_agent.run(user_msg="Tell me the top 5 Hacker News stories right now")
 print(output)

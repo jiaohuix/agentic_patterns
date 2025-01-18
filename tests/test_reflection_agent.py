@@ -1,6 +1,23 @@
+import os
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
 from agentic_patterns import ReflectionAgent
 
-agent = ReflectionAgent()
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_BASE = os.getenv('OPENAI_API_BASE')
+
+
+client = OpenAI(
+api_key=OPENAI_API_KEY,
+base_url=OPENAI_API_BASE
+)
+model_name = "Qwen/Qwen2.5-Coder-7B-Instruct"
+
+agent = ReflectionAgent(client=client,
+        model=model_name)
 
 generation_system_prompt = "You are a Python programmer tasked with generating high quality Python code"
 

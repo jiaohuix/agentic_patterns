@@ -1,5 +1,6 @@
 from textwrap import dedent
 # textwrap.dedent 是 Python 标准库 textwrap 模块中的一个函数，用于去除文本字符串中每一行前面的公共前导空白。这个函数特别有用在处理多行字符串时，可以使代码更整洁，并且在保持文本格式的同时去掉不必要的缩进。
+from openai import OpenAI
 
 from agentic_patterns.multiagent_pattern.crew import Crew
 from agentic_patterns.planning_pattern.react_agent import ReactAgent
@@ -40,13 +41,14 @@ class Agent:
         task_expected_output: str = "",
         tools: list[Tool] | None = None,
         llm: str = "llama-3.1-70b-versatile",
+        client: OpenAI = None,
     ):
         self.name = name
         self.backstory = backstory
         self.task_description = task_description
         self.task_expected_output = task_expected_output
         self.react_agent = ReactAgent(
-            model=llm, system_prompt=self.backstory, tools=tools or []
+            model=llm, client=client, system_prompt=self.backstory, tools=tools or []
         )
 
         self.dependencies: list[Agent] = []  # Agents that this agent depends on

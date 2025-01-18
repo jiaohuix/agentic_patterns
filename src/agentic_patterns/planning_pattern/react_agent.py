@@ -72,9 +72,10 @@ class ReactAgent:
         self,
         tools: Tool | list[Tool],
         model: str = "llama-3.1-70b-versatile",
+        client: OpenAI = None,
         system_prompt: str = BASE_SYSTEM_PROMPT,
     ) -> None:
-        self.client: OpenAI = None
+        self.client = client
         self.model = model
         self.system_prompt = system_prompt
         self.tools = tools if isinstance(tools, list) else [tools]

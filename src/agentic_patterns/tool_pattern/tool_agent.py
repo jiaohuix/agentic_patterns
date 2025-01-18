@@ -50,8 +50,9 @@ class ToolAgent:
         self,
         tools: Tool | list[Tool],
         model: str = "llama-3.1-70b-versatile",
+        client: OpenAI = None
     ) -> None:
-        self.client: OpenAI = None
+        self.client = client
         self.model = model
         self.tools = tools if isinstance(tools, list) else [tools]
         self.tools_dict = {tool.name: tool for tool in self.tools}
