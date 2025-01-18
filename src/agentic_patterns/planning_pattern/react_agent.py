@@ -171,9 +171,14 @@ class ReactAgent:
                 tool_calls = extract_tag_content(str(completion), "tool_call")
 
                 update_chat_history(chat_history, completion, "assistant")
+                print("completion",completion,"--")
+                print("thought",thought,"--")
 
-                print(Fore.MAGENTA + f"\nThought: {thought.content[0]}")
-
+                try:
+                    print(Fore.MAGENTA + f"\nThought: {thought.content[0]}")
+                except Exception as e:
+                    print(Fore.RED, e)
+                    
                 if tool_calls.found:
                     observations = self.process_tool_calls(tool_calls.content)
                     print(Fore.BLUE + f"\nObservations: {observations}")
