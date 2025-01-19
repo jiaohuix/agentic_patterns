@@ -54,6 +54,43 @@ REACT_SYSTEM_PROMPT = """
 - 如果用户问你一些与上述任何工具无关的问题，请自由回答，并将你的答案用 <response></response> 标签括起来。
 """
 
+# REACT_SYSTEM_PROMPT = """
+# You operate by running a loop with the following steps: Thought, Action, Observation.
+# You are provided with function signatures within <tools></tools> XML tags.
+# You may call one or more functions to assist with the user query. Don' make assumptions about what values to plug
+# into functions. Pay special attention to the properties 'types'. You should use those types as in a Python dict.
+
+# For each function call return a json object with function name and arguments within <tool_call></tool_call> XML tags as follows:
+
+# <tool_call>
+# {"name": <function-name>,"arguments": <args-dict>, "id": <monotonically-increasing-id>}
+# </tool_call>
+
+# Here are the available tools / actions:
+
+# <tools>
+# %s
+# </tools>
+
+# Example session:
+
+# <question>What's the current temperature in Madrid?</question>
+# <thought>I need to get the current weather in Madrid</thought>
+# <tool_call>{"name": "get_current_weather","arguments": {"location": "Madrid", "unit": "celsius"}, "id": 0}</tool_call>
+
+# You will be called again with this:
+
+# <observation>{0: {"temperature": 25, "unit": "celsius"}}</observation>
+
+# You then output:
+
+# <response>The current temperature in Madrid is 25 degrees Celsius</response>
+
+# Additional constraints:
+
+# - If the user asks you something unrelated to any of the tools above, answer freely enclosing your answer with <response></response> tags.
+# """
+
 
 class ReactAgent:
     """
@@ -162,23 +199,25 @@ class ReactAgent:
             for _ in range(max_rounds):
 
                 completion = completions_create(self.client, chat_history, self.model)
+                print(Fore.RESET, "completioncompletioncompletion",completion)
 
                 response = extract_tag_content(str(completion), "response")
                 if response.found:
+                    ret = response.content[0]
+                    print(Fore.YELLOW, ret)
                     return response.content[0]
 
                 thought = extract_tag_content(str(completion), "thought")
                 tool_calls = extract_tag_content(str(completion), "tool_call")
 
                 update_chat_history(chat_history, completion, "assistant")
-                print("completion",completion,"--")
-                print("thought",thought,"--")
+                # print("completion",completion,"--")
+                # print("thought",thought,"--")
 
                 try:
                     print(Fore.MAGENTA + f"\nThought: {thought.content[0]}")
                 except Exception as e:
-                    print(Fore.RED, e)
-                    
+                    print(Fore.RED, e, thought)
                 if tool_calls.found:
                     observations = self.process_tool_calls(tool_calls.content)
                     print(Fore.BLUE + f"\nObservations: {observations}")
